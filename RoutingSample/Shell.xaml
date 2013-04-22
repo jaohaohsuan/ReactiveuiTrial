@@ -3,5 +3,16 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:routing="clr-namespace:ReactiveUI.Routing;assembly=ReactiveUI.Routing"
         Title="Shell" Height="350" Width="525">
-    <routing:RoutedViewHost x:Name="ViewHost"/>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border BorderBrush="Green" BorderThickness="0 0 0 1">
+            <routing:RoutedViewHost x:Name="ViewHost"/>
+        </Border>
+        <TextBlock Grid.Row="1" Foreground="LightGray" FontSize="16" Margin="10" VerticalAlignment="Center" HorizontalAlignment="Right" Text="Base on RoutedViewHost"/>
+
+    </Grid>
 </Window>
