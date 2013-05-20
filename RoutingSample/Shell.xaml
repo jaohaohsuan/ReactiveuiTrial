@@ -12,7 +12,13 @@
         <Border BorderBrush="Green" BorderThickness="0 0 0 1">
             <routing:RoutedViewHost x:Name="ViewHost"/>
         </Border>
-        <TextBlock Grid.Row="1" Foreground="LightGray" FontSize="16" Margin="10" VerticalAlignment="Center" HorizontalAlignment="Right" Text="Base on RoutedViewHost"/>
-
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="5">
+            <Button Name="NavigateBack" Content="Back" HorizontalAlignment="Left" VerticalAlignment="Center"
+                    Command="{Binding Router.NavigateBack,ElementName=ViewHost}"/>
+            
+            <TextBlock Foreground="LightGray" FontSize="16" Margin="10" VerticalAlignment="Center" Text="Base on RoutedViewHost"/>
+        </StackPanel>
+        
+        
     </Grid>
 </Window>

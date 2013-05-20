@@ -17,45 +17,33 @@ using ReactiveUI.Routing;
 namespace RoutingSample
 {
     /// <summary>
-    /// Interaction logic for Welcome.xaml
+    /// Interaction logic for NextPage1.xaml
     /// </summary>
-    public partial class Welcome : UserControl, IViewFor<WelcomeViewModel>
+    public partial class NextPage1 : UserControl, IViewFor<NextPage1ViewModel>
     {
-        public Welcome()
+        public NextPage1()
         {
             InitializeComponent();
-            this.OneWayBind(ViewModel, x => x.Greeting, v=> v.Greeting.Text); //won't throw exception
-            //this.OneWayBind(ViewModel, x => x.Greeting);
-
         }
 
-        public WelcomeViewModel ViewModel
+        public NextPage1ViewModel ViewModel
         {
-            get { return (WelcomeViewModel)GetValue(ViewModelProperty); }
+            get { return (NextPage1ViewModel)GetValue(ViewModelProperty); }
             set { SetValue(ViewModelProperty, value); }
         }
         public static readonly DependencyProperty ViewModelProperty =
-            DependencyProperty.Register("ViewModel", typeof(WelcomeViewModel), typeof(Welcome), new PropertyMetadata(null));
+            DependencyProperty.Register("ViewModel", typeof(NextPage1ViewModel), typeof(NextPage1), new PropertyMetadata(null));
 
         object IViewFor.ViewModel
         {
             get { return ViewModel; }
-            set { ViewModel = (WelcomeViewModel)value; }
+            set { ViewModel = (NextPage1ViewModel)value; }
         }
     }
 
-    public class WelcomeViewModel : ReactiveUI.ReactiveObject ,IRoutableViewModel
+    public class NextPage1ViewModel : ReactiveObject, IRoutableViewModel
     {
-        public WelcomeViewModel(IScreen screen)
-        {
-            HostScreen = screen;
-            Greeting = "Hello Reactiveui!";
-        }
-
-        public string Greeting { get; private set; }
-
         public string UrlPathSegment { get; private set; }
         public IScreen HostScreen { get; private set; }
-
     }
 }

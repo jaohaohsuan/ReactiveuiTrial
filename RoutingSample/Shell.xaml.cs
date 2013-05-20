@@ -14,22 +14,45 @@ using System.Windows.Shapes;
 using Autofac;
 using ReactiveUI;
 using ReactiveUI.Routing;
+using ReactiveUI.Xaml;
 
 namespace RoutingSample
 {
+    public class ShellViewModel : RoutingState
+    {
+        
+    }
+
     /// <summary>
     /// Interaction logic for Shell.xaml
     /// </summary>
-    public partial class Shell : Window, IScreen
+    public partial class Shell : Window, IScreen, IViewFor<ShellViewModel>
     {
         public Shell()
         {
-            ConfigIoc();
+            ConfigIoc();  
+            DataContext = Router = new ShellViewModel();
             InitializeComponent();
-            Router = new RoutingState();
+
             ViewHost.Router = Router;
 
+            //this.BindCommand(ViewModel, x => x.NavigateBack, v=> v.NavigateBack, "Click");
             Router.Navigate.Go<WelcomeViewModel>();
+            Router.Navigate.Go<NextPage1ViewModel>();
+        }
+
+        public ShellViewModel ViewModel
+        {
+            get { return (ShellViewModel)GetValue(ViewModelProperty); }
+            set { SetValue(ViewModelProperty, value); }
+        }
+        public static readonly DependencyProperty ViewModelProperty =
+            DependencyProperty.Register("ViewModel", typeof(ShellViewModel), typeof(Shell), new PropertyMetadata(null));
+
+        object IViewFor.ViewModel
+        {
+            get { return ViewModel; }
+            set { ViewModel = (ShellViewModel)value; }
         }
 
         public IRoutingState Router { get; private set; }
@@ -40,6 +63,10 @@ namespace RoutingSample
 
             builder.RegisterType<WelcomeViewModel>();
             builder.RegisterType<Welcome>().As<IViewFor<WelcomeViewModel>>();
+
+            builder.RegisterType<NextPage1ViewModel>();
+            builder.RegisterType<NextPage1>().As<IViewFor<NextPage1ViewModel>>();
+
             builder.RegisterInstance(this).As<IScreen>();
 
             var container = builder.Build();
