@@ -12,28 +12,24 @@ namespace RoutingSample
 {
     public class LifetimeScopeContainer : IObserver<EventPattern<LifetimeScopeBeginningEventArgs>>
     {
-        private readonly Subject<Tuple<Type, Type, string>> _registerTypesObserver;
+        private readonly Subject<ComponentsRegistration> _registerTypesObserver;
         
         private ILifetimeScope _current;
 
-        public LifetimeScopeContainer(Subject<Tuple<Type, Type, string>> registerTypesObserver)
+        public LifetimeScopeContainer(IObserver<IList<ComponentsRegistration>> batchComponentsRegistration)
         {
+            _registerTypesObserver = new Subject<ComponentsRegistration>();
 
-            _registerTypesObserver = registerTypesObserver;
-
-            //_registerTypesObserver = new Subject<Tuple<Type, Type, string>>();
-
-          
-
-            //_registerTypesObserver.Buffer(TimeSpan.FromMilliseconds(5)).Where(b => b.Any())
-            //                      .Subscribe(new BatchComponentsRegistration(container));
-
+            _registerTypesObserver.Buffer(TimeSpan.FromMilliseconds(5))
+                                          .Where(buffer => buffer.Any())
+                                          .Subscribe(batchComponentsRegistration);
+            //do not change order
             RxApp.ConfigureServiceLocator(OnGetService, OnGetAllServices, OnRegister);
         }
 
         private void OnRegister(Type concreteType, Type interfaceType, string key)
         {
-            _registerTypesObserver.OnNext(Tuple.Create(concreteType, interfaceType, key));
+            _registerTypesObserver.OnNext(new ComponentsRegistration(concreteType, interfaceType, key));
         }
 
         private object OnGetService(Type interfaceType, string key)

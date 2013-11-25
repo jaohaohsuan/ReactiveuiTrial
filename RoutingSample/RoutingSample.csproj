@@ -127,7 +127,9 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="AppBootstrapper.cs" />
     <Compile Include="BatchComponentsRegistration.cs" />
+    <Compile Include="ComponentsRegistration.cs" />
     <Compile Include="LifetimeScopeContainer.cs" />
     <Compile Include="NextPage1.xaml.cs">
       <DependentUpon>NextPage1.xaml</DependentUpon>
