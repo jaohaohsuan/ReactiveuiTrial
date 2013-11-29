@@ -23,14 +23,7 @@ namespace RoutingSample
         {
             new AppBootstrapper();
 
-            AppBootstrapper.Container.BeginLifetimeScope(builder =>
-            {
-                builder.RegisterType<WelcomeViewModel>().InstancePerLifetimeScope();
-                builder.RegisterType<Welcome>().As<IViewFor<WelcomeViewModel>>().InstancePerLifetimeScope();
-
-                builder.RegisterType<NextPage1ViewModel>().InstancePerLifetimeScope();
-                builder.RegisterType<NextPage1>().As<IViewFor<NextPage1ViewModel>>().InstancePerLifetimeScope();
-            });
+            
         }
     }
 }

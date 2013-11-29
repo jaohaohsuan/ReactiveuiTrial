@@ -7,39 +7,42 @@ using System.Reactive.Subjects;
 using System.Text;
 using Autofac;
 using Autofac.Core.Lifetime;
+using Reactive.EventAggregator;
 using ReactiveUI.Routing;
 
 namespace RoutingSample
 {
-    public class AppBootstrapper : IScreen, IDisposable
+    public class AppBootstrapper : IDisposable
     {
-        private static IContainer _container;
+        private readonly EventAggregator _eventAggregator;
 
-        private readonly IRoutingState _router;
-        private readonly IObservable<EventPattern<LifetimeScopeBeginningEventArgs>> _lifetimeScopeObs;
-        public IRoutingState Router { get { return _router; } }
-
-        public AppBootstrapper(IContainer testContainer = null, IRoutingState testRouter = null)
+        public AppBootstrapper(IContainer testContainer = null)
         {
-            _router = testRouter ?? new RoutingState();
+            _eventAggregator = new EventAggregator();
+            
+            var container = testContainer ?? CreateDefaultContainer();
 
-            _container = testContainer ?? CreateDefaultContainer();
+            _eventAggregator.GetEvent<ContainerBuilder>().Subscribe(builder =>
+            {
+                builder.Update(container);
+            });
+            
+            var lifetimeScopeObs = Observable.FromEventPattern<LifetimeScopeBeginningEventArgs>(
+                ev => container.ChildLifetimeScopeBeginning += ev,
+                ev => container.ChildLifetimeScopeBeginning -= ev);
 
-            _lifetimeScopeObs = Observable.FromEventPattern<LifetimeScopeBeginningEventArgs>(
-                ev => _container.ChildLifetimeScopeBeginning += ev,
-                ev => _container.ChildLifetimeScopeBeginning -= ev);
+            lifetimeScopeObs.Subscribe(new LifetimeScopeContainer(new BatchComponentsRegistration(_eventAggregator)));
 
-            _lifetimeScopeObs.Subscribe(new LifetimeScopeContainer(new BatchComponentsRegistration(_container)));
+            container.BeginLifetimeScope();
         }
-        
-        public static IContainer Container { get { return _container; } }
-
 
         IContainer CreateDefaultContainer()
         {
             var builder = new ContainerBuilder();
             
-            builder.RegisterInstance<IScreen>(this);
+            builder.RegisterInstance(_eventAggregator);
+            builder.RegisterInstance(new RoutingState()).As<IRoutingState>();
+            builder.RegisterType<ShellViewModel>().As<IScreen>().As<ShellViewModel>();
 
             return builder.Build();
         }

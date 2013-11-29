@@ -2,17 +2,18 @@
 using System.Collections.Generic;
 using System.Windows.Forms.VisualStyles;
 using Autofac;
+using Reactive.EventAggregator;
 
 namespace RoutingSample
 {
 
     public class BatchComponentsRegistration : IObserver<IList<ComponentsRegistration>>
     {
-        private readonly IContainer _container;
+        private readonly EventAggregator _eventAggregator;
 
-        public BatchComponentsRegistration(IContainer container)
+        public BatchComponentsRegistration(EventAggregator eventAggregator)
         {
-            _container = container;
+            _eventAggregator = eventAggregator;
         }
 
         public void OnNext(IList<ComponentsRegistration> value)
@@ -22,7 +23,7 @@ namespace RoutingSample
             foreach (var o in value)
                 Register(builder, o);
 
-            builder.Update(_container);
+            _eventAggregator.Publish(builder);
         }
 
         private void Register(ContainerBuilder builder, ComponentsRegistration registration)

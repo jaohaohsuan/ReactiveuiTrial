@@ -4,6 +4,12 @@
              xmlns:local="clr-namespace:RoutingSample"
              StartupUri="Shell.xaml">
     <Application.Resources>
-         
+         <ResourceDictionary>
+             <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Themes/Windows8/System.Windows.xaml" />
+                <ResourceDictionary Source="Themes/Windows8/Telerik.Windows.Controls.xaml" />
+                <ResourceDictionary Source="Themes/Windows8/Telerik.Windows.Controls.Input.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+         </ResourceDictionary>
     </Application.Resources>
 </Application>
