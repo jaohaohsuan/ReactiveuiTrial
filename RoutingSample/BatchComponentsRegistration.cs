@@ -6,6 +6,20 @@ using Reactive.EventAggregator;
 
 namespace RoutingSample
 {
+    public class BatchComponentsRegistedEvent
+    {
+        private ContainerBuilder _builder;
+
+        public BatchComponentsRegistedEvent(ContainerBuilder builder)
+        {
+            _builder = builder;
+        }
+
+        public void Update(IContainer container)
+        {
+            _builder.Update(container);
+        }
+    }
 
     public class BatchComponentsRegistration : IObserver<IList<ComponentsRegistration>>
     {
@@ -23,7 +37,7 @@ namespace RoutingSample
             foreach (var o in value)
                 Register(builder, o);
 
-            _eventAggregator.Publish(builder);
+            _eventAggregator.Publish(new BatchComponentsRegistedEvent(builder));
         }
 
         private void Register(ContainerBuilder builder, ComponentsRegistration registration)

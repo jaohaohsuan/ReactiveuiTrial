@@ -1,13 +1,10 @@
 ﻿using System;
-using System.Linq;
 using System.Reactive;
 using System.Reactive.Concurrency;
+using System.Reactive.Disposables;
 using System.Reactive.Linq;
-using System.Reactive.Subjects;
-using System.Security.Cryptography.X509Certificates;
 using System.Windows;
 using Autofac;
-using Autofac.Core.Lifetime;
 using Reactive.EventAggregator;
 using ReactiveUI;
 using ReactiveUI.Routing;
@@ -21,38 +18,53 @@ namespace RoutingSample
         public ShellViewModel(EventAggregator eventAggregator, IRoutingState router)
         {
             _router = router;
-            
-            GoToDefaultPages = Observable.Create<Unit>(observer => Scheduler.Default.Schedule(() =>
-           {
-               try
-               {
-                   var builder = new ContainerBuilder();
 
-                   builder.RegisterType<WelcomeViewModel>().InstancePerLifetimeScope();
-                   builder.RegisterType<Welcome>().As<IViewFor<WelcomeViewModel>>().InstancePerLifetimeScope();
+            RegisterCompoments = Observable.Create<Unit>(observer => Scheduler.Default.Schedule(() =>
+            {
+                try
+                {
+                    var builder = new ContainerBuilder();
 
-                   builder.RegisterType<NextPage1ViewModel>().InstancePerLifetimeScope();
-                   builder.RegisterType<NextPage1>().As<IViewFor<NextPage1ViewModel>>().InstancePerLifetimeScope();
+                    builder.RegisterType<WelcomeViewModel>().InstancePerLifetimeScope();
+                    builder.RegisterType<Welcome>().As<IViewFor<WelcomeViewModel>>().InstancePerLifetimeScope();
 
-                   eventAggregator.Publish(builder);
+                    builder.RegisterType<NextPage1ViewModel>().InstancePerLifetimeScope();
+                    builder.RegisterType<NextPage1>().As<IViewFor<NextPage1ViewModel>>().InstancePerLifetimeScope();
 
-                   _router.Navigate.Go<WelcomeViewModel>();
-                   _router.Navigate.Go<NextPage1ViewModel>();
+                    eventAggregator.Publish(new BatchComponentsRegistedEvent(builder));
 
-                   observer.OnCompleted();
-               }
-               catch (Exception ex)
-               {
-                   observer.OnError(ex);
-               }
-           }));
+                    observer.OnCompleted();
+                }
+                catch (Exception ex)
+                {
+                    observer.OnError(ex);
+                }
+            }));
+
+            GoToDefaultPage = Observable.Create<Unit>(observer => Scheduler.CurrentThread.Schedule(() =>
+                {
+                    {
+                        try
+                        {
+                            _router.Navigate.Go<WelcomeViewModel>();
+                            _router.Navigate.Go<NextPage1ViewModel>();
+                            observer.OnCompleted();
+                        }
+                        catch (Exception ex)
+                        {
+                            observer.OnError(ex);
+                        }
+                    }
+                })
+            );
         }
 
-        public IObservable<Unit> GoToDefaultPages { get; private set; }
+        public IObservable<Unit> RegisterCompoments { get; private set; }
+
+        public IObservable<Unit> GoToDefaultPage { get; set; }
 
         public IRoutingState Router { get { return _router; } }
     }
-
 
 
     /// <summary>
@@ -65,14 +77,41 @@ namespace RoutingSample
 
         public Shell()
         {
+            Application.Current.Dispatcher.UnhandledException += (sender, e) =>
+            {
+                var log = log4net.LogManager.GetLogger(typeof(Shell));
+                log.Error(e.Exception);
+            };
+
             InitializeComponent();
 
-            ViewHost.Router = RxApp.GetService<IRoutingState>();
+            //Observable.Create(observer => {  });
+
             
-            RxApp.GetService<ShellViewModel>().GoToDefaultPages.Retry().Subscribe(x =>
-            {
-                
+            AppBootstrapper.LifetimeScopeBeginningSource.ObserveOnDispatcher().Subscribe(_ =>
+            { 
+                //_.EventArgs.LifetimeScope.Resolve<IRoutingState>(); // RxApp.GetService<IRoutingState>();
+                ViewHost.Router = _.EventArgs.LifetimeScope.Resolve<IRoutingState>();
+                var vm = _.EventArgs.LifetimeScope.Resolve<ShellViewModel>(); //_.EventArgs.LifetimeScope.Resolve<ShellViewModel>();
+
+                    vm.RegisterCompoments.CombineLatest(vm.GoToDefaultPage, (unit, unit1) =>
+                    {
+                        return Unit.Default;
+                    }).Retry().Subscribe(x =>
+                    {
+
+                    });
+
+                //try
+                //{
+                    
+                //}
+                //catch (Exception ex)
+                //{
+                //    MessageBox.Show(ex.Message);
+                //}
             });
+
         }
 
         public ShellViewModel ViewModel
@@ -82,6 +121,5 @@ namespace RoutingSample
         }
 
         object IViewFor.ViewModel { get { return ViewModel; } set { ViewModel = (ShellViewModel)value; } }
-
     }
 }
