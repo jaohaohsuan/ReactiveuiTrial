@@ -144,9 +144,10 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="AppBootstrapper.cs" />
-    <Compile Include="BatchComponentsRegistration.cs" />
-    <Compile Include="ComponentsRegistration.cs" />
-    <Compile Include="LifetimeScopeContainer.cs" />
+    <Compile Include="ComponentsRegistedEvent.cs" />
+    <Compile Include="ComponentsRegistrationValue.cs" />
+    <Compile Include="ShellViewModel.cs" />
+    <Compile Include="UseAutofacServiceLocator.cs" />
     <Compile Include="NextPage1.xaml.cs">
       <DependentUpon>NextPage1.xaml</DependentUpon>
     </Compile>
@@ -204,7 +205,9 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-    <None Include="app.config" />
+    <None Include="app.config">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="packages.config">
       <SubType>Designer</SubType>
     </None>

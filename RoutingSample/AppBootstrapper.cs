@@ -1,12 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Net.NetworkInformation;
 using System.Reactive;
 using System.Reactive.Concurrency;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
-using System.Reactive.Subjects;
-using System.Text;
 using Autofac;
 using Autofac.Core.Lifetime;
 using Reactive.EventAggregator;
@@ -14,81 +11,63 @@ using ReactiveUI.Routing;
 
 namespace RoutingSample
 {
-    public class AppBootstrapper : IDisposable, IObserver<BatchComponentsRegistedEvent>
+    public class ContainerUpdatedEvent
     {
-        private readonly EventAggregator _eventAggregator;
-        private static IContainer _container;
+        
+    }
 
-        public static IObservable<EventPattern<LifetimeScopeBeginningEventArgs>> LifetimeScopeBeginningSource;
-
-        static AppBootstrapper()
-        {
-            _container = new ContainerBuilder().Build();
-
-            LifetimeScopeBeginningSource = Observable.FromEventPattern<LifetimeScopeBeginningEventArgs>(
-                ev => _container.ChildLifetimeScopeBeginning += ev,
-                ev => _container.ChildLifetimeScopeBeginning -= ev);
-        }
+    public class AppBootstrapper : IDisposable
+    {
+        private IEventAggregator _eventAggregator =  new EventAggregator();
+        private readonly UseAutofacServiceLocator _configServiceLocator = new UseAutofacServiceLocator();
 
         public AppBootstrapper(IContainer testContainer = null)
         {
-            _eventAggregator = new EventAggregator();
-
-            Observable.Create<IContainer>(observer =>
+            OnStartUp = Observable.Create<ILifetimeScope>(observer => Scheduler.Default.Schedule(() =>
             {
                 try
                 {
-                    var root = testContainer ?? CreateDefaultContainer();
+                    var root = testContainer ?? CreateRootContainer();
 
-                    _eventAggregator.GetEvent<BatchComponentsRegistedEvent>().Subscribe(this);
+                    //sync new components registration
+                    _eventAggregator.GetEvent<ComponentsRegistedEvent>().Subscribe(e =>
+                    {
+                        e.Update(root);
+                        _eventAggregator.Publish(new ContainerUpdatedEvent());
+                    });
+                    
+                    Observable.FromEventPattern<LifetimeScopeBeginningEventArgs>(h => root.ChildLifetimeScopeBeginning += h, h => root.ChildLifetimeScopeBeginning -= h)
+                              .Select(o=> o.EventArgs.LifetimeScope)
+                              .ObserveOn(Scheduler.Default).Subscribe(_configServiceLocator);
 
-                    LifetimeScopeBeginningSource.ObserveOn(Scheduler.Default).Subscribe(new LifetimeScopeContainer(new BatchComponentsRegistration(_eventAggregator)));
-
-                    observer.OnNext(root);
+                    observer.OnNext(root.BeginLifetimeScope());
+                    observer.OnCompleted();
                 }
                 catch (Exception ex)
                 {
                     observer.OnError(ex);
                 }
-                return Disposable.Empty;
-            }).SubscribeOn(Scheduler.Default)
-            .Subscribe(c =>
-            {
-                c.BeginLifetimeScope();
-            });
+            }));
+
+            _configServiceLocator.OnRegisted.Subscribe(buffer => _eventAggregator.Publish(new ComponentsRegistedEvent(buffer)));
         }
 
-        IContainer CreateDefaultContainer()
-        {
-            var builder = new ContainerBuilder();
-
-            builder.RegisterInstance(_eventAggregator);
-            builder.RegisterInstance(new RoutingState()).As<IRoutingState>();
-            builder.RegisterType<ShellViewModel>().As<IScreen>().As<ShellViewModel>();
-
-            builder.Update(_container);
-
-            return _container;
-        }
+        public IObservable<ILifetimeScope> OnStartUp { get; private set; }
 
         public void Dispose()
         {
-
         }
 
-        public void OnNext(BatchComponentsRegistedEvent value)
+        private IContainer CreateRootContainer()
         {
-            value.Update(_container);
-        }
+            var builder = new ContainerBuilder();
 
-        public void OnError(Exception error)
-        {
-            throw new NotImplementedException();
-        }
+            builder.RegisterInstance(_eventAggregator).As<IEventAggregator>().As<EventAggregator>();
+            builder.RegisterInstance(new RoutingState()).As<IRoutingState>();
+            builder.RegisterType<ShellViewModel>().As<IScreen>().As<ShellViewModel>();
+            builder.RegisterType<Shell>().PropertiesAutowired();
 
-        public void OnCompleted()
-        {
-            throw new NotImplementedException();
+            return builder.Build();
         }
     }
 }

@@ -2,13 +2,13 @@
 
 namespace RoutingSample
 {
-    public class ComponentsRegistration
+    public class ComponentRegistrationValue
     {
         private readonly Type _concreteType;
         private readonly Type _interfaceType;
         private readonly string _key;
 
-        public ComponentsRegistration(Type concreteType, Type interfaceType, string key)
+        public ComponentRegistrationValue(Type concreteType, Type interfaceType, string key)
         {
             _concreteType = concreteType;
             _interfaceType = interfaceType;

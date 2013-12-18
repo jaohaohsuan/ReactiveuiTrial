@@ -10,26 +10,32 @@ using ReactiveUI;
 
 namespace RoutingSample
 {
-    public class LifetimeScopeContainer : IObserver<EventPattern<LifetimeScopeBeginningEventArgs>>
+    public class UseAutofacServiceLocator : IObserver<ILifetimeScope>
     {
-        private readonly Subject<ComponentsRegistration> _registerTypesObserver;
+        private readonly Subject<ComponentRegistrationValue> _registerTypesObserver = new Subject<ComponentRegistrationValue>();
         
         private ILifetimeScope _current;
 
-        public LifetimeScopeContainer(IObserver<IList<ComponentsRegistration>> batchComponentsRegistration)
-        {
-            _registerTypesObserver = new Subject<ComponentsRegistration>();
+        private readonly IObservable<IList<ComponentRegistrationValue>> _onRegisted;
 
-            _registerTypesObserver.Buffer(TimeSpan.FromMilliseconds(5))
-                                          .Where(buffer => buffer.Any())
-                                          .Subscribe(batchComponentsRegistration);
+        public UseAutofacServiceLocator()
+        {
+            _onRegisted = _registerTypesObserver.Buffer(TimeSpan.FromMilliseconds(5)).Where(buffer => buffer.Any());
+        }
+
+        void IObserver<ILifetimeScope>.OnNext(ILifetimeScope value)
+        {
+            _current = value;
             //do not change order
             RxApp.ConfigureServiceLocator(OnGetService, OnGetAllServices, OnRegister);
         }
 
+        public IObservable<IList<ComponentRegistrationValue>> OnRegisted { get { return _onRegisted; } }
+
+
         private void OnRegister(Type concreteType, Type interfaceType, string key)
         {
-            _registerTypesObserver.OnNext(new ComponentsRegistration(concreteType, interfaceType, key));
+            _registerTypesObserver.OnNext(new ComponentRegistrationValue(concreteType, interfaceType, key));
         }
 
         private object OnGetService(Type interfaceType, string key)
@@ -45,11 +51,6 @@ namespace RoutingSample
             if (key != null)
                 return _current.ResolveNamed(key, constructed) as IEnumerable<object>;
             return _current.Resolve(constructed) as IEnumerable<object>;
-        }
-
-        public void OnNext(EventPattern<LifetimeScopeBeginningEventArgs> value)
-        {
-            _current = value.EventArgs.LifetimeScope;
         }
 
         public void OnError(Exception error)
