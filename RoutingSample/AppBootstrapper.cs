@@ -4,58 +4,65 @@ using System.Reactive;
 using System.Reactive.Concurrency;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
+using System.Runtime.InteropServices;
 using Autofac;
 using Autofac.Core.Lifetime;
+using NLog;
 using Reactive.EventAggregator;
+using ReactiveUI;
 using ReactiveUI.Routing;
 
 namespace RoutingSample
 {
     public class ContainerUpdatedEvent
     {
+        public ContainerUpdatedEvent()
+        {
+
+        }
+    }
+
+    public class OpenNewLifetimeScope
+    {
         
     }
 
     public class AppBootstrapper : IDisposable
     {
-        private IEventAggregator _eventAggregator =  new EventAggregator();
+        private IEventAggregator _eventAggregator = new EventAggregator();
         private readonly UseAutofacServiceLocator _configServiceLocator = new UseAutofacServiceLocator();
+        private readonly Logger _logger;
+
+        public IObservable<ILifetimeScope> OnStartUp { get; private set; }
 
         public AppBootstrapper(IContainer testContainer = null)
         {
-            OnStartUp = Observable.Create<ILifetimeScope>(observer => Scheduler.Default.Schedule(() =>
+            _logger = NLog.LogManager.GetCurrentClassLogger();
+
+            OnStartUp = Observable.Create<ILifetimeScope>(observer =>
             {
+                var d = new CompositeDisposable();
                 try
                 {
-                    var root = testContainer ?? CreateRootContainer();
+                    var lifetimeScope = Config(testContainer ?? CreateRootContainer()).BeginLifetimeScope();
 
-                    //sync new components registration
-                    _eventAggregator.GetEvent<ComponentsRegistedEvent>().Subscribe(e =>
+                    d.Add(Disposable.Create(() =>
                     {
-                        e.Update(root);
-                        _eventAggregator.Publish(new ContainerUpdatedEvent());
-                    });
-                    
-                    Observable.FromEventPattern<LifetimeScopeBeginningEventArgs>(h => root.ChildLifetimeScopeBeginning += h, h => root.ChildLifetimeScopeBeginning -= h)
-                              .Select(o=> o.EventArgs.LifetimeScope)
-                              .ObserveOn(Scheduler.Default).Subscribe(_configServiceLocator);
+                        lifetimeScope.Dispose();
+                        _logger.Info("Startup lifetimeScope disposed");
+                    }));
 
-                    observer.OnNext(root.BeginLifetimeScope());
-                    observer.OnCompleted();
+                    observer.OnNext(lifetimeScope);
                 }
                 catch (Exception ex)
                 {
                     observer.OnError(ex);
                 }
-            }));
+
+                return d;
+            });
 
             _configServiceLocator.OnRegisted.Subscribe(buffer => _eventAggregator.Publish(new ComponentsRegistedEvent(buffer)));
-        }
-
-        public IObservable<ILifetimeScope> OnStartUp { get; private set; }
-
-        public void Dispose()
-        {
         }
 
         private IContainer CreateRootContainer()
@@ -69,5 +76,33 @@ namespace RoutingSample
 
             return builder.Build();
         }
+
+        private IContainer Config(IContainer root)
+        {
+            _eventAggregator.GetEvent<OpenNewLifetimeScope>().ObserveOn(Scheduler.Default).Subscribe(_ =>
+            {
+                root.BeginLifetimeScope();
+            });
+
+            //components registration handling
+            _eventAggregator.GetEvent<ComponentsRegistedEvent>().Subscribe(e =>
+            {
+                e.Update(root);
+                if(e.RaiseContainerEUpdateEvent)
+                    _eventAggregator.Publish(new ContainerUpdatedEvent());
+            });
+
+            //child lifetimeScope beginning handling
+            Observable.FromEventPattern<LifetimeScopeBeginningEventArgs>(h => root.ChildLifetimeScopeBeginning += h, h => root.ChildLifetimeScopeBeginning -= h)
+                      .Select(o => o.EventArgs.LifetimeScope)
+                      .ObserveOn(Scheduler.Default).Subscribe(_configServiceLocator);
+
+            return root;
+        }
+        public void Dispose()
+        {
+
+        }
+
     }
 }

@@ -16,9 +16,11 @@ namespace RoutingSample
         public ShellViewModel(EventAggregator eventAggregator, IRoutingState router)
         {
             _router = router;
-
+            
             OnCompomentsRegisted = Observable.Create<Unit>(observer => Scheduler.Default.Schedule(() =>
             {
+                eventAggregator.Publish(new OpenNewLifetimeScope());
+
                 eventAggregator.GetEvent<ContainerUpdatedEvent>().Subscribe(_ =>
                 {
                     observer.OnNext(Unit.Default);

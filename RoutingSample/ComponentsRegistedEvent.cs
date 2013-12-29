@@ -15,6 +15,8 @@ namespace RoutingSample
 
         private readonly ContainerBuilder _builder;
 
+        public bool RaiseContainerEUpdateEvent { get; private set; }
+
         public ComponentsRegistedEvent(IEnumerable<ComponentRegistrationValue> values)
         {
             _builder = new ContainerBuilder();
@@ -26,6 +28,7 @@ namespace RoutingSample
         public ComponentsRegistedEvent(ContainerBuilder builder)
         {
             _builder = builder;
+            RaiseContainerEUpdateEvent = true;
         }
 
         public void Update(IContainer container)
