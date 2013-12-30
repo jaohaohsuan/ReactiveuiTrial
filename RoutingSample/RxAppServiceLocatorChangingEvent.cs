@@ -3,7 +3,7 @@ using Autofac;
 
 namespace RoutingSample
 {
-    public class ComponentsRegistedEvent
+    public class RxAppServiceLocatorChangingEvent
     {
         static void Register(ContainerBuilder builder, ComponentRegistrationValue registration)
         {
@@ -17,7 +17,7 @@ namespace RoutingSample
 
         public bool RaiseContainerEUpdateEvent { get; private set; }
 
-        public ComponentsRegistedEvent(IEnumerable<ComponentRegistrationValue> values)
+        public RxAppServiceLocatorChangingEvent(IEnumerable<ComponentRegistrationValue> values)
         {
             _builder = new ContainerBuilder();
 
@@ -25,11 +25,11 @@ namespace RoutingSample
                 Register(_builder, o);
         }
 
-        public ComponentsRegistedEvent(ContainerBuilder builder)
-        {
-            _builder = builder;
-            RaiseContainerEUpdateEvent = true;
-        }
+        //public RxAppServiceLocatorChangingEvent(ContainerBuilder builder)
+        //{
+        //    _builder = builder;
+        //    RaiseContainerEUpdateEvent = true;
+        //}
 
         public void Update(IContainer container)
         {

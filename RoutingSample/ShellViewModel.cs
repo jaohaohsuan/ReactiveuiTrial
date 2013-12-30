@@ -2,6 +2,7 @@
 using System.Reactive;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
+using System.Threading;
 using Autofac;
 using Reactive.EventAggregator;
 using ReactiveUI;
@@ -15,17 +16,13 @@ namespace RoutingSample
 
         public ShellViewModel(EventAggregator eventAggregator, IRoutingState router)
         {
-            _router = router;
-            
-            OnCompomentsRegisted = Observable.Create<Unit>(observer => Scheduler.Default.Schedule(() =>
-            {
-                eventAggregator.Publish(new OpenNewLifetimeScope());
+            var logger = NLog.LogManager.GetCurrentClassLogger();
 
-                eventAggregator.GetEvent<ContainerUpdatedEvent>().Subscribe(_ =>
-                {
-                    observer.OnNext(Unit.Default);
-                    observer.OnCompleted();
-                });
+            _router = router;
+
+            OnCompomentsRegisted = Observable.Create<Unit>(observer => Scheduler.Default.Schedule(() =>
+            { 
+                logger.Info(string.Format("Starting Compoments Registration on thread {0}.", Thread.CurrentThread));
 
                 var builder = new ContainerBuilder();
 
@@ -34,8 +31,10 @@ namespace RoutingSample
 
                 builder.RegisterType<NextPage1ViewModel>().InstancePerLifetimeScope();
                 builder.RegisterType<NextPage1>().As<IViewFor<NextPage1ViewModel>>().InstancePerLifetimeScope();
-
-                eventAggregator.Publish(new ComponentsRegistedEvent(builder));
+                
+                eventAggregator.Publish(new OpenNewLifetimeScope(builder));
+                observer.OnNext(Unit.Default);
+                observer.OnCompleted();
             }));
         }
 

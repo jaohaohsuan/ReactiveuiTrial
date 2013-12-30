@@ -10,7 +10,7 @@ using ReactiveUI;
 
 namespace RoutingSample
 {
-    public class UseAutofacServiceLocator : IObserver<ILifetimeScope>
+    public class UseAutofacServiceLocator
     {
         private readonly Subject<ComponentRegistrationValue> _registerTypesObserver = new Subject<ComponentRegistrationValue>();
         
@@ -23,11 +23,10 @@ namespace RoutingSample
             _onRegisted = _registerTypesObserver.Buffer(TimeSpan.FromMilliseconds(5)).Where(buffer => buffer.Any());
         }
 
-        void IObserver<ILifetimeScope>.OnNext(ILifetimeScope value)
+        public void Upate(ILifetimeScope value)
         {
             _current = value;
-            //do not change order
-            RxApp.ConfigureServiceLocator(OnGetService, OnGetAllServices, OnRegister);
+            RxApp.ConfigureServiceLocator(OnGetService, OnGetAllServices, OnRegister); 
         }
 
         public IObservable<IList<ComponentRegistrationValue>> OnRegisted { get { return _onRegisted; } }
@@ -51,16 +50,6 @@ namespace RoutingSample
             if (key != null)
                 return _current.ResolveNamed(key, constructed) as IEnumerable<object>;
             return _current.Resolve(constructed) as IEnumerable<object>;
-        }
-
-        public void OnError(Exception error)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void OnCompleted()
-        {
-            throw new NotImplementedException();
         }
     }
 }

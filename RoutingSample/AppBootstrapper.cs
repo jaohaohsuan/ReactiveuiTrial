@@ -5,27 +5,31 @@ using System.Reactive.Concurrency;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Autofac;
 using Autofac.Core.Lifetime;
 using NLog;
 using Reactive.EventAggregator;
 using ReactiveUI;
 using ReactiveUI.Routing;
+using System.Linq;
 
 namespace RoutingSample
 {
-    public class ContainerUpdatedEvent
-    {
-        public ContainerUpdatedEvent()
-        {
-
-        }
-    }
-
     public class OpenNewLifetimeScope
     {
-        
+        private ContainerBuilder _builder;
+
+        public OpenNewLifetimeScope(ContainerBuilder builder)
+        {
+            _builder = builder;
+        }
+
+        public ContainerBuilder Builder { get { return _builder; } }
     }
+
+    public class NewLifetimeScopeCreated
+    {}
 
     public class AppBootstrapper : IDisposable
     {
@@ -42,9 +46,12 @@ namespace RoutingSample
             OnStartUp = Observable.Create<ILifetimeScope>(observer =>
             {
                 var d = new CompositeDisposable();
+
                 try
                 {
-                    var lifetimeScope = Config(testContainer ?? CreateRootContainer()).BeginLifetimeScope();
+                    var lifetimeScope = Config(testContainer ?? CreateRootContainer()).BeginLifetimeScope("root");
+
+                    _configServiceLocator.Upate(lifetimeScope);
 
                     d.Add(Disposable.Create(() =>
                     {
@@ -62,7 +69,7 @@ namespace RoutingSample
                 return d;
             });
 
-            _configServiceLocator.OnRegisted.Subscribe(buffer => _eventAggregator.Publish(new ComponentsRegistedEvent(buffer)));
+            _configServiceLocator.OnRegisted.Subscribe(buffer => _eventAggregator.Publish(new RxAppServiceLocatorChangingEvent(buffer)));
         }
 
         private IContainer CreateRootContainer()
@@ -79,23 +86,21 @@ namespace RoutingSample
 
         private IContainer Config(IContainer root)
         {
-            _eventAggregator.GetEvent<OpenNewLifetimeScope>().ObserveOn(Scheduler.Default).Subscribe(_ =>
+            _eventAggregator.GetEvent<OpenNewLifetimeScope>().Subscribe(x =>
             {
-                root.BeginLifetimeScope();
+                 x.Builder.Update(root);
+                _configServiceLocator.Upate(root.BeginLifetimeScope(x.Builder));
+                _logger.Info(string.Format("RxApp ServiceLocator setup success on thread {0}.", Thread.CurrentThread));
+                //_eventAggregator.Publish(new NewLifetimeScopeCreated());
             });
 
             //components registration handling
-            _eventAggregator.GetEvent<ComponentsRegistedEvent>().Subscribe(e =>
+            _eventAggregator.GetEvent<RxAppServiceLocatorChangingEvent>().Subscribe(e =>
             {
                 e.Update(root);
-                if(e.RaiseContainerEUpdateEvent)
-                    _eventAggregator.Publish(new ContainerUpdatedEvent());
-            });
+                _logger.Info(string.Format("RxApp ServiceLocator Registrations updated on thread {0}.", Thread.CurrentThread));
 
-            //child lifetimeScope beginning handling
-            Observable.FromEventPattern<LifetimeScopeBeginningEventArgs>(h => root.ChildLifetimeScopeBeginning += h, h => root.ChildLifetimeScopeBeginning -= h)
-                      .Select(o => o.EventArgs.LifetimeScope)
-                      .ObserveOn(Scheduler.Default).Subscribe(_configServiceLocator);
+            });
 
             return root;
         }
