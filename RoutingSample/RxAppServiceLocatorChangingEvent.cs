@@ -25,12 +25,6 @@ namespace RoutingSample
                 Register(_builder, o);
         }
 
-        //public RxAppServiceLocatorChangingEvent(ContainerBuilder builder)
-        //{
-        //    _builder = builder;
-        //    RaiseContainerEUpdateEvent = true;
-        //}
-
         public void Update(IContainer container)
         {
             _builder.Update(container);

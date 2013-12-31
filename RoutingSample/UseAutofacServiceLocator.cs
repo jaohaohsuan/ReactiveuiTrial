@@ -18,19 +18,23 @@ namespace RoutingSample
 
         private readonly IObservable<IList<ComponentRegistrationValue>> _onRegisted;
 
-        public UseAutofacServiceLocator()
+        public UseAutofacServiceLocator(IContainer container)
         {
+            _current = container;
             _onRegisted = _registerTypesObserver.Buffer(TimeSpan.FromMilliseconds(5)).Where(buffer => buffer.Any());
         }
 
         public void Upate(ILifetimeScope value)
         {
             _current = value;
-            RxApp.ConfigureServiceLocator(OnGetService, OnGetAllServices, OnRegister); 
         }
 
-        public IObservable<IList<ComponentRegistrationValue>> OnRegisted { get { return _onRegisted; } }
-
+        public IDisposable OnRegisted(IObserver<IList<ComponentRegistrationValue>> observer)
+        {
+            var subscription = _onRegisted.Subscribe(observer);
+            RxApp.ConfigureServiceLocator(OnGetService, OnGetAllServices, OnRegister); 
+            return subscription;
+        }
 
         private void OnRegister(Type concreteType, Type interfaceType, string key)
         {

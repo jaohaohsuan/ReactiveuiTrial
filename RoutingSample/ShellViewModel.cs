@@ -21,18 +21,17 @@ namespace RoutingSample
             _router = router;
 
             OnCompomentsRegisted = Observable.Create<Unit>(observer => Scheduler.Default.Schedule(() =>
-            { 
+            {
                 logger.Info(string.Format("Starting Compoments Registration on thread {0}.", Thread.CurrentThread));
 
-                var builder = new ContainerBuilder();
+                eventAggregator.Publish(new OpenNewLifetimeScopeCommand(builder =>
+                {
+                    builder.RegisterType<WelcomeViewModel>().InstancePerLifetimeScope();
+                    builder.RegisterType<Welcome>().As<IViewFor<WelcomeViewModel>>().InstancePerLifetimeScope();
 
-                builder.RegisterType<WelcomeViewModel>().InstancePerLifetimeScope();
-                builder.RegisterType<Welcome>().As<IViewFor<WelcomeViewModel>>().InstancePerLifetimeScope();
-
-                builder.RegisterType<NextPage1ViewModel>().InstancePerLifetimeScope();
-                builder.RegisterType<NextPage1>().As<IViewFor<NextPage1ViewModel>>().InstancePerLifetimeScope();
-                
-                eventAggregator.Publish(new OpenNewLifetimeScope(builder));
+                    builder.RegisterType<NextPage1ViewModel>().InstancePerLifetimeScope();
+                    builder.RegisterType<NextPage1>().As<IViewFor<NextPage1ViewModel>>().InstancePerLifetimeScope();
+                }));
                 observer.OnNext(Unit.Default);
                 observer.OnCompleted();
             }));
